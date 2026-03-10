@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const GATE_INFO = {
   INPUT: { inputs: 0, label: "INPUT" },
@@ -12,8 +12,8 @@ const GATE_INFO = {
 };
 
 const GATE_TYPES = ["AND", "OR", "NOT", "NAND", "NOR", "XOR"];
-const WORKSPACE_WIDTH = 840;
-const WORKSPACE_HEIGHT = 520;
+const WORKSPACE_WIDTH = 1400;
+const WORKSPACE_HEIGHT = 900;
 
 function makeId(prefix = "id") {
   return `${prefix}_${Math.random().toString(36).slice(2, 9)}`;
@@ -21,10 +21,10 @@ function makeId(prefix = "id") {
 
 function getInitialNodes() {
   return [
-    { id: "A", type: "INPUT", label: "A", x: 100, y: 120, value: false },
-    { id: "B", type: "INPUT", label: "B", x: 100, y: 280, value: false },
-    { id: "G1", type: "AND", label: "AND1", x: 380, y: 200, inputCount: 2 },
-    { id: "OUT1", type: "OUTPUT", label: "OUT1", x: 720, y: 200 },
+    { id: "A", type: "INPUT", label: "A", x: 140, y: 180, value: false },
+    { id: "B", type: "INPUT", label: "B", x: 140, y: 360, value: false },
+    { id: "G1", type: "AND", label: "AND1", x: 560, y: 270, inputCount: 2 },
+    { id: "OUT1", type: "OUTPUT", label: "OUT1", x: 1160, y: 270 },
   ];
 }
 
@@ -258,6 +258,7 @@ function GateChip({ label, active, onClick }) {
         fontSize: "13px",
         fontWeight: "600",
         transition: "0.2s",
+        flex: "1 1 auto",
       }}
     >
       {label}
@@ -275,7 +276,19 @@ function GateShape({ node, value, selected, onMouseDown, onSelect, onToggleInput
 
   const body = (() => {
     if (node.type === "INPUT" || node.type === "OUTPUT") {
-      return <rect x={-width / 2} y={-height / 2} rx="24" ry="24" width={width} height={height} fill={fill} stroke={stroke} strokeWidth={selected ? 2.6 : 1.8} />;
+      return (
+        <rect
+          x={-width / 2}
+          y={-height / 2}
+          rx="24"
+          ry="24"
+          width={width}
+          height={height}
+          fill={fill}
+          stroke={stroke}
+          strokeWidth={selected ? 2.6 : 1.8}
+        />
+      );
     }
 
     if (node.type === "NOT") {
@@ -374,16 +387,19 @@ function GateShape({ node, value, selected, onMouseDown, onSelect, onToggleInput
         </g>
       )}
 
-      {!isOutput && <circle
-        cx={width / 2 + 12}
-        cy="0"
-        r="12"
-        fill="#ffffff"
-        stroke="#0f172a"
-        strokeWidth="2"
-        style={{ cursor: "crosshair" }}
-        onMouseDown={onStartWire}
-      />}
+      {!isOutput && (
+        <circle
+          cx={width / 2 + 12}
+          cy="0"
+          r="12"
+          fill="#ffffff"
+          stroke="#0f172a"
+          strokeWidth="2"
+          style={{ cursor: "crosshair" }}
+          onMouseDown={onStartWire}
+        />
+      )}
+
       {!isInput &&
         Array.from({ length: count }).map((_, index) => {
           const cy = getInputOffsetY(node, index);
@@ -405,7 +421,20 @@ function App() {
   const [wireDrag, setWireDrag] = useState(null);
   const [hoverPort, setHoverPort] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   const svgRef = useRef(null);
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowWidth(window.innerWidth);
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 980;
+  const isSmallMobile = windowWidth < 640;
 
   const outputs = useMemo(() => computeOutputs(nodes, connections), [nodes, connections]);
   const truthTable = useMemo(() => generateTruthTable(nodes, connections), [nodes, connections]);
@@ -432,8 +461,8 @@ function App() {
         id,
         type,
         label,
-        x: 250 + (count % 3) * 150,
-        y: 100 + Math.floor(count / 3) * 110,
+        x: 300 + (count % 3) * 180,
+        y: 140 + Math.floor(count / 3) * 140,
         ...(["AND", "OR", "NAND", "NOR", "XOR"].includes(type) ? { inputCount: 2 } : {}),
       },
     ]);
@@ -449,8 +478,8 @@ function App() {
         id: makeId("IN"),
         type: "INPUT",
         label,
-        x: 100,
-        y: 120 + count * 90,
+        x: 140,
+        y: 140 + count * 110,
         value: false,
       },
     ]);
@@ -464,8 +493,8 @@ function App() {
         id: makeId("OUT"),
         type: "OUTPUT",
         label: `OUT${count + 1}`,
-        x: 720,
-        y: 150 + count * 100,
+        x: 1160,
+        y: 180 + count * 130,
       },
     ]);
   }
@@ -576,14 +605,16 @@ function App() {
 
     if (!dragState) return;
 
+    const margin = 70;
+
     setNodes((prev) =>
       prev.map((node) =>
         node.id === dragState.nodeId
           ? {
-            ...node,
-            x: Math.max(70, Math.min(770, point.x - dragState.offsetX)),
-            y: Math.max(70, Math.min(450, point.y - dragState.offsetY)),
-          }
+              ...node,
+              x: Math.max(margin, Math.min(WORKSPACE_WIDTH - margin, point.x - dragState.offsetX)),
+              y: Math.max(margin, Math.min(WORKSPACE_HEIGHT - margin, point.y - dragState.offsetY)),
+            }
           : node
       )
     );
@@ -608,46 +639,70 @@ function App() {
   }
 
   function copyExpressions() {
-    const text = expressions
-      .map((item) => `${item.label} = ${item.expr}`)
-      .join("\n");
-
+    const text = expressions.map((item) => `${item.label} = ${item.expr}`).join("\n");
     navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 1200);
   }
 
-  const selectedGateSupportsMultipleInputs = selectedNode && ["AND", "OR", "NAND", "NOR", "XOR"].includes(selectedNode.type);
+  const selectedGateSupportsMultipleInputs =
+    selectedNode && ["AND", "OR", "NAND", "NOR", "XOR"].includes(selectedNode.type);
 
   return (
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100dvh",
+        width: "100%",
         background: "radial-gradient(circle at top left, #eff6ff 0%, #f8fafc 35%, #eef2ff 100%)",
-        padding: "28px",
+        padding: "clamp(12px, 2vw, 28px)",
         fontFamily: "Inter, Arial, Helvetica, sans-serif",
         color: "#0f172a",
         userSelect: "none",
+        boxSizing: "border-box",
       }}
     >
-      <div style={{ width: "100%", margin: "0 auto" }}>
+      <div style={{ width: "100%", maxWidth: "none", margin: "0 auto" }}>
         <div
           style={{
             background: "rgba(255,255,255,0.78)",
             border: "1px solid rgba(219, 234, 254, 0.9)",
             backdropFilter: "blur(12px)",
             borderRadius: "28px",
-            padding: "24px 28px",
+            padding: isSmallMobile ? "18px" : "24px 28px",
             boxShadow: "0 16px 40px rgba(15, 23, 42, 0.08)",
             marginBottom: "22px",
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "16px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
             <div>
-              <div style={{ fontSize: "13px", fontWeight: "700", letterSpacing: "0.08em", textTransform: "uppercase", color: "#475569", marginBottom: "6px" }}>
+              <div
+                style={{
+                  fontSize: "13px",
+                  fontWeight: "700",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                  color: "#475569",
+                  marginBottom: "6px",
+                }}
+              >
                 Digital Logic Design
               </div>
-              <h1 style={{ margin: 0, fontSize: "34px", fontWeight: "800", letterSpacing: "-0.03em" }}>
+              <h1
+                style={{
+                  margin: 0,
+                  fontSize: "clamp(26px, 3vw, 34px)",
+                  fontWeight: "800",
+                  letterSpacing: "-0.03em",
+                }}
+              >
                 Boolean Logic Visualizer
               </h1>
             </div>
@@ -662,12 +717,25 @@ function App() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "320px minmax(0, 1fr)",
+            gridTemplateColumns: isMobile ? "1fr" : "minmax(300px, 360px) minmax(0, 1fr)",
             gap: "22px",
             width: "100%",
+            alignItems: "start",
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "20px",
+              position: isMobile ? "static" : "sticky",
+              top: isMobile ? "auto" : "20px",
+              alignSelf: "start",
+              maxHeight: isMobile ? "none" : "calc(100dvh - 40px)",
+              overflowY: isMobile ? "visible" : "auto",
+              paddingRight: isMobile ? 0 : "4px",
+            }}
+          >
             <section style={panelStyle}>
               <div style={sectionHeaderStyle}>
                 <h2 style={sectionTitleStyle}>Gates</h2>
@@ -695,22 +763,42 @@ function App() {
               <select value={selectedFrom} onChange={(e) => setSelectedFrom(e.target.value)} style={inputStyle}>
                 <option value="">Select source</option>
                 {sourceNodes.map((node) => (
-                  <option key={node.id} value={node.id}>{node.label} ({node.type})</option>
+                  <option key={node.id} value={node.id}>
+                    {node.label} ({node.type})
+                  </option>
                 ))}
               </select>
 
               <label style={{ ...labelStyle, marginTop: "14px" }}>To</label>
-              <select value={selectedTo} onChange={(e) => { setSelectedTo(e.target.value); setSelectedInputIndex(0); }} style={inputStyle}>
+              <select
+                value={selectedTo}
+                onChange={(e) => {
+                  setSelectedTo(e.target.value);
+                  setSelectedInputIndex(0);
+                }}
+                style={inputStyle}
+              >
                 <option value="">Select target</option>
                 {targetNodes.map((node) => (
-                  <option key={node.id} value={node.id}>{node.label} ({node.type})</option>
+                  <option key={node.id} value={node.id}>
+                    {node.label} ({node.type})
+                  </option>
                 ))}
               </select>
 
               <label style={{ ...labelStyle, marginTop: "14px" }}>Port</label>
-              <input type="number" min="0" max="7" value={selectedInputIndex} onChange={(e) => setSelectedInputIndex(Number(e.target.value || 0))} style={inputStyle} />
+              <input
+                type="number"
+                min="0"
+                max="7"
+                value={selectedInputIndex}
+                onChange={(e) => setSelectedInputIndex(Number(e.target.value || 0))}
+                style={inputStyle}
+              />
 
-              <button onClick={addConnectionManual} style={{ ...buttonStyle, width: "100%", marginTop: "16px" }}>Connect</button>
+              <button onClick={addConnectionManual} style={{ ...buttonStyle, width: "100%", marginTop: "16px" }}>
+                Connect
+              </button>
             </section>
 
             <section style={panelStyle}>
@@ -725,9 +813,16 @@ function App() {
                     <span style={badgeStyle}>Output {outputs[selectedNode.id] ? "1" : "0"}</span>
                     {selectedGateSupportsMultipleInputs && <span style={badgeStyle}>{getInputCount(selectedNode)} Inputs</span>}
                   </div>
+
                   <div style={{ marginTop: "14px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-                    <div style={infoCardStyle}><div style={infoLabelStyle}>X</div><div style={infoValueStyle}>{Math.round(selectedNode.x)}</div></div>
-                    <div style={infoCardStyle}><div style={infoLabelStyle}>Y</div><div style={infoValueStyle}>{Math.round(selectedNode.y)}</div></div>
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>X</div>
+                      <div style={infoValueStyle}>{Math.round(selectedNode.x)}</div>
+                    </div>
+                    <div style={infoCardStyle}>
+                      <div style={infoLabelStyle}>Y</div>
+                      <div style={infoValueStyle}>{Math.round(selectedNode.y)}</div>
+                    </div>
                   </div>
 
                   {selectedGateSupportsMultipleInputs && (
@@ -738,7 +833,9 @@ function App() {
                   )}
 
                   {selectedNode.type === "INPUT" && (
-                    <button onClick={() => toggleInput(selectedNode.id)} style={{ ...buttonStyle, width: "100%", marginTop: "16px" }}>Toggle Input</button>
+                    <button onClick={() => toggleInput(selectedNode.id)} style={{ ...buttonStyle, width: "100%", marginTop: "16px" }}>
+                      Toggle Input
+                    </button>
                   )}
                 </>
               ) : (
@@ -749,7 +846,9 @@ function App() {
             <section style={panelStyle}>
               <div style={sectionHeaderStyle}>
                 <h2 style={sectionTitleStyle}>Expression</h2>
-                <button onClick={copyExpressions} style={smallActionStyle}>{copied ? "Copied" : "Copy"}</button>
+                <button onClick={copyExpressions} style={smallActionStyle}>
+                  {copied ? "Copied" : "Copy"}
+                </button>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {expressions.map((item) => (
@@ -764,7 +863,9 @@ function App() {
             <section style={panelStyle}>
               <div style={sectionHeaderStyle}>
                 <h2 style={sectionTitleStyle}>I/O Status</h2>
-                <span style={sectionTagStyle}>{inputNodes.length} In / {outputNodes.length} Out</span>
+                <span style={sectionTagStyle}>
+                  {inputNodes.length} In / {outputNodes.length} Out
+                </span>
               </div>
               <div style={{ marginBottom: "16px" }}>
                 <div style={subHeadingStyle}>Inputs</div>
@@ -806,17 +907,34 @@ function App() {
             </section>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "20px", minWidth: 0 }}>
             <section style={panelStyle}>
               <div style={sectionHeaderStyle}>
                 <h2 style={sectionTitleStyle}>Circuit Workspace</h2>
                 <span style={sectionTagStyle}>{nodes.length} Nodes</span>
               </div>
-              <div style={{ borderRadius: "24px", overflow: "hidden", border: "1px solid #dbe3ee", background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)" }}>
+
+              <div
+                style={{
+                  borderRadius: "24px",
+                  overflow: "hidden",
+                  border: "1px solid #dbe3ee",
+                  background: "linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.7)",
+                  height: isMobile ? "65dvh" : "calc(100dvh - 240px)",
+                  minHeight: isMobile ? "420px" : "620px",
+                }}
+              >
                 <svg
                   ref={svgRef}
                   viewBox={`0 0 ${WORKSPACE_WIDTH} ${WORKSPACE_HEIGHT}`}
-                  style={{ width: "100%", height: "520px", display: "block", touchAction: "none", userSelect: "none" }}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "block",
+                    touchAction: "none",
+                    userSelect: "none",
+                  }}
                   onDragStart={(e) => e.preventDefault()}
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
@@ -845,6 +963,7 @@ function App() {
                     const p2 = getPortPosition(toNode, "in", conn.inputIndex);
                     const midX = (p1.x + p2.x) / 2;
                     const active = outputs[conn.from];
+
                     return (
                       <g key={conn.id}>
                         <path
@@ -914,27 +1033,51 @@ function App() {
                 <h2 style={sectionTitleStyle}>Truth Table</h2>
                 <span style={sectionTagStyle}>{truthTable.length} Rows</span>
               </div>
-              <div style={{ overflowX: "auto", borderRadius: "18px", border: "1px solid #dbe3ee" }}>
+
+              <div
+                style={{
+                  overflow: "auto",
+                  maxHeight: "420px",
+                  borderRadius: "18px",
+                  border: "1px solid #dbe3ee",
+                }}
+              >
                 <table
                   style={{
                     width: "100%",
                     borderCollapse: "collapse",
                     background: "#ffffff",
                     fontSize: "14px",
+                    minWidth: "420px",
                   }}
                 >
                   <thead>
                     <tr style={{ background: "#f8fafc" }}>
-                      {inputNodes.map((node) => <th key={node.id} style={tableHeadStyle}>{node.label}</th>)}
-                      {outputNodes.map((node) => <th key={node.id} style={tableHeadStyle}>{node.label}</th>)}
+                      {inputNodes.map((node) => (
+                        <th key={node.id} style={tableHeadStyle}>{node.label}</th>
+                      ))}
+                      {outputNodes.map((node) => (
+                        <th key={node.id} style={tableHeadStyle}>{node.label}</th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {truthTable.map((row, rowIndex) => (
                       <tr key={rowIndex} style={{ background: rowIndex % 2 === 0 ? "#ffffff" : "#fbfdff" }}>
-                        {row.inputs.map((cell, index) => <td key={`i-${index}`} style={tableCellStyle}>{cell.value}</td>)}
+                        {row.inputs.map((cell, index) => (
+                          <td key={`i-${index}`} style={tableCellStyle}>{cell.value}</td>
+                        ))}
                         {row.outputs.map((cell, index) => (
-                          <td key={`o-${index}`} style={{ ...tableCellStyle, fontWeight: "700", color: cell.value ? "#16a34a" : "#334155" }}>{cell.value}</td>
+                          <td
+                            key={`o-${index}`}
+                            style={{
+                              ...tableCellStyle,
+                              fontWeight: "700",
+                              color: cell.value ? "#16a34a" : "#334155",
+                            }}
+                          >
+                            {cell.value}
+                          </td>
                         ))}
                       </tr>
                     ))}
@@ -956,6 +1099,7 @@ const panelStyle = {
   borderRadius: "26px",
   padding: "20px",
   boxShadow: "0 16px 34px rgba(15, 23, 42, 0.06)",
+  minWidth: 0,
 };
 
 const sectionHeaderStyle = {
@@ -1141,6 +1285,10 @@ const tableHeadStyle = {
   textAlign: "left",
   color: "#334155",
   fontWeight: "800",
+  position: "sticky",
+  top: 0,
+  background: "#f8fafc",
+  zIndex: 1,
 };
 
 const tableCellStyle = {
