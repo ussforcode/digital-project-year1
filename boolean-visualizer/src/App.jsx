@@ -375,15 +375,15 @@ function GateShape({ node, value, selected, onMouseDown, onSelect, onToggleInput
       )}
 
       {!isOutput && <circle
-            cx={width / 2 + 12}
-            cy="0"
-            r="12"
-            fill="#ffffff"
-            stroke="#0f172a"
-            strokeWidth="2"
-            style={{ cursor: "crosshair" }}
-            onMouseDown={onStartWire}
-          />}
+        cx={width / 2 + 12}
+        cy="0"
+        r="12"
+        fill="#ffffff"
+        stroke="#0f172a"
+        strokeWidth="2"
+        style={{ cursor: "crosshair" }}
+        onMouseDown={onStartWire}
+      />}
       {!isInput &&
         Array.from({ length: count }).map((_, index) => {
           const cy = getInputOffsetY(node, index);
@@ -434,7 +434,7 @@ function App() {
         label,
         x: 250 + (count % 3) * 150,
         y: 100 + Math.floor(count / 3) * 110,
-        ...( ["AND", "OR", "NAND", "NOR", "XOR"].includes(type) ? { inputCount: 2 } : {} ),
+        ...(["AND", "OR", "NAND", "NOR", "XOR"].includes(type) ? { inputCount: 2 } : {}),
       },
     ]);
     setSelectedNodeId(id);
@@ -580,10 +580,10 @@ function App() {
       prev.map((node) =>
         node.id === dragState.nodeId
           ? {
-              ...node,
-              x: Math.max(70, Math.min(770, point.x - dragState.offsetX)),
-              y: Math.max(70, Math.min(450, point.y - dragState.offsetY)),
-            }
+            ...node,
+            x: Math.max(70, Math.min(770, point.x - dragState.offsetX)),
+            y: Math.max(70, Math.min(450, point.y - dragState.offsetY)),
+          }
           : node
       )
     );
@@ -608,14 +608,14 @@ function App() {
   }
 
   function copyExpressions() {
-  const text = expressions
-    .map((item) => `${item.label} = ${item.expr}`)
-    .join("\n");
+    const text = expressions
+      .map((item) => `${item.label} = ${item.expr}`)
+      .join("\n");
 
-  navigator.clipboard?.writeText(text);
-  setCopied(true);
-  setTimeout(() => setCopied(false), 1200);
-}
+    navigator.clipboard?.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1200);
+  }
 
   const selectedGateSupportsMultipleInputs = selectedNode && ["AND", "OR", "NAND", "NOR", "XOR"].includes(selectedNode.type);
 
@@ -630,7 +630,7 @@ function App() {
         userSelect: "none",
       }}
     >
-      <div style={{ maxWidth: "1480px", margin: "0 auto" }}>
+      <div style={{ width: "100%", margin: "0 auto" }}>
         <div
           style={{
             background: "rgba(255,255,255,0.78)",
@@ -659,7 +659,14 @@ function App() {
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "370px 1fr", gap: "22px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "320px minmax(0, 1fr)",
+            gap: "22px",
+            width: "100%",
+          }}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
             <section style={panelStyle}>
               <div style={sectionHeaderStyle}>
