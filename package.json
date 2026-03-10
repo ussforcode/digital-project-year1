@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://github.com/ussforcode",
+  "homepage": "https://ussforcode.github.io/digital-project-year1/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
